@@ -22,12 +22,37 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "identifier": "net.lpzg.scp",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
-  }
-}
+    ],
+    "windows": {
+      "webviewInstallMode": {
+        "type": "embedBootstrapper"
+      },
+      "wix": {
+        "language": "zh-CN",
+        "license": "LICENSE.txt"
+      }
+    },
+    "linux": {
+      "deb": {
+        "depends": [
+          "libwebkit2gtk-4.1-0",
+          "libayatana-appindicator3-1",
+          "libgtk-3-0"
+        ]
+      },
+      "appimage": {
+        "bundleMediaFramework": true
+      }
+    },
+    "macOS": {
+      "entitlements": null,
+      "exceptionDomain": "localhost",
+      "signingIdentity": null
+    }
