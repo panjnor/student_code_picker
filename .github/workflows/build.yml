@@ -1,0 +1,64 @@
+name: Build and Release Tauri App
+
+on:
+  push:
+    branches: [ "master" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1️⃣ 检出代码
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2️⃣ 设置 Node.js 环境
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # 3️⃣ 缓存 npm 依赖（加速构建）
+      - name: Cache node modules
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      # 4️⃣ 安装依赖
+      - name: Install dependencies
+        run: npm install
+
+      # 5️⃣ 读取 package.json 版本号并保存到环境变量
+      - name: Read version from package.json
+        id: package-version
+        run: echo "PACKAGE_VERSION=$(node -p \"require('./package.json').version\")" >> $GITHUB_ENV
+
+      # 6️⃣ 构建 Tauri 应用
+      - name: Build project (Tauri)
+        run: npm run tauri build
+
+      # 7️⃣ 上传构建产物到 Actions 页面（备份）
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: tauri-build
+          path: |
+            src-tauri/target/release/bundle/
+            !**/*.pdb
+
+      # 8️⃣ 自动创建或更新 GitHub Release
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ env.PACKAGE_VERSION }}
+          name: "Release v${{ env.PACKAGE_VERSION }}"
+          body: "自动构建的 Tauri 应用 ✨"
+          files: |
+            src-tauri/target/release/bundle/**/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
