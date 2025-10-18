@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" type="image/svg+xml" href="/vite.svg">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>随机数</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+  <div class="container">
+    <h1>随机数抽取器</h1>
+    <div>
+      <label>最小值: <input id="min" type="number" value="1"></label>
+      <label>最大值: <input id="max" type="number" value="100"></label>
+      <button id="draw">抽取</button>
+    </div>
+    <div id="result"></div>
+  </div>
+
+<div id="popup-overlay">
+  <div id="popup-content"></div>
+</div>
+
+  <!-- 1. 添加一个用于绘制纸屑的 canvas -->
+  <canvas id="confetti-canvas"></canvas>
+
+  <!-- 2. 引用 confetti.js 库 (在 main.js 之前) -->
+  <script type="module" src="confetti.js"></script>
+  
+  <!-- 3. 引用你的主脚本 -->
+  <script type="module" src="main.js"></script>
+</body>
+</html>
