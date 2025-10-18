@@ -36,7 +36,9 @@ jobs:
       # 5️⃣ 读取 package.json 版本号并保存到环境变量
       - name: Read version from package.json
         id: package-version
-        run: echo "PACKAGE_VERSION=$(node -p \"require('./package.json').version\")" >> $GITHUB_ENV
+        run: |
+          PACKAGE_VERSION=$(node -p "require('./package.json').version")
+          echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> $GITHUB_ENV
 
       # 6️⃣ 构建 Tauri 应用
       - name: Build project (Tauri)
