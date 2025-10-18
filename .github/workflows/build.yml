@@ -7,33 +7,28 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [ubuntu-latest, windows-latest, macos-latest]
+
+    runs-on: ${{ matrix.platform }}
 
     steps:
-      # 1️⃣ 检出代码
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2️⃣ 设置 Node.js 环境
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      # 3️⃣ 缓存 npm 依赖（加速构建）
-      - name: Cache node modules
-        uses: actions/cache@v4
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
-
-      # 4️⃣ 安装依赖
       - name: Install dependencies
         run: npm install
 
+      # Linux 依赖（仅 Linux 平台执行）
       - name: Install Linux build dependencies
+        if: matrix.platform == 'ubuntu-latest'
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -46,27 +41,27 @@ jobs:
             wget \
             pkg-config
 
-
-      # 6️⃣ 构建 Tauri 应用
-      - name: Build project (Tauri)
+      # 构建
+      - name: Build Tauri app
         run: npm run tauri build
 
-      # 7️⃣ 上传构建产物到 Actions 页面（备份）
+      # 上传构建产物
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: tauri-build
+          name: tauri-${{ matrix.platform }}
           path: |
             src-tauri/target/release/bundle/
             !**/*.pdb
 
-      # 8️⃣ 自动创建或更新 GitHub Release
+      # 创建或更新 Release（仅在 Linux 平台执行一次）
       - name: Create GitHub Release
+        if: matrix.platform == 'ubuntu-latest'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ env.PACKAGE_VERSION }}
           name: "Release v${{ env.PACKAGE_VERSION }}"
-          body: "自动构建的 Tauri 应用 ✨"
+          body: "自动构建的多平台 Tauri 应用 ✨"
           files: |
             src-tauri/target/release/bundle/**/*
         env:
