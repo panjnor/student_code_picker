@@ -74,20 +74,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Node
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "22"
+          cache: 'npm'
 
-      - uses: npm/action-setup@v4
-        name: Install npm
-        with:
-          run_install: false
 
-      - name: npm install
-        run: npm i
+      - name: Install dependencies
+        run: npm ci
 
-      - name: Release updater file
-        run: npm updater
+      - name: Create updater artifacts
+        run: npm run updater
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
