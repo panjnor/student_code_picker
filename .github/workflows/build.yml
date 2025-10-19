@@ -48,15 +48,10 @@ jobs:
         with:
           node-version: "22"
 
-      - uses: pnpm/action-setup@v4
-        name: Install pnpm
-        with:
-          run_install: false
-
-      - name: Pnpm install and check
+      - name: Npm install and check
         run: |
-          pnpm i
-          pnpm check ${{ matrix.target }}
+          npm install
+          npm run check -- ${{ matrix.target }}
 
       - name: Tauri build
         uses: tauri-apps/tauri-action@v0
@@ -69,8 +64,9 @@ jobs:
           tagName: v__VERSION__
           releaseName: "Tauri Motrix v__VERSION__"
           releaseBody: "More new features are now supported."
-          tauriScript: pnpm tauri
+          tauriScript: npm run tauri
           args: --target ${{ matrix.target }}
+
 
   release-update:
     runs-on: ubuntu-latest
@@ -84,15 +80,15 @@ jobs:
         with:
           node-version: "22"
 
-      - uses: pnpm/action-setup@v4
-        name: Install pnpm
+      - uses: npm/action-setup@v4
+        name: Install npm
         with:
           run_install: false
 
-      - name: Pnpm install
-        run: pnpm i
+      - name: npm install
+        run: npm i
 
       - name: Release updater file
-        run: pnpm updater
+        run: npm updater
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
