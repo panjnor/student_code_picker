@@ -1,181 +1,147 @@
+// Prevents additional console window on Windows in release, DO NOT REMOVE!!
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
-use cpal::{Sample, SampleFormat, StreamConfig,SizedSample};
+use cpal::{Sample,SizedSample};
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaChaRng;
 use sha2::{Digest, Sha256};
-use std::sync::{Arc, RwLock};
 use std::thread;
-use std::any::TypeId;
+use once_cell::sync::Lazy;
+use std::sync::{mpsc, Arc, RwLock};
+use std::time::SystemTime;
+use std::time::Duration;
 
-
-static mut GLOBAL_SEED: Option<Arc<RwLock<[u8; 32]>>> = None;
+// --- CHANGED: Replaced `static mut` with `once_cell::sync::Lazy` ---
+// This is now completely safe. `Lazy` handles thread-safe, one-time initialization.
+// The value inside the RwLock is now an Option to signal if the seed has been generated yet.
+static GLOBAL_SEED: Lazy<Arc<RwLock<Option<[u8; 32]>>>> =
+    Lazy::new(|| Arc::new(RwLock::new(None)));
 
 fn init_audio_seed() {
-    let seed_arc = Arc::new(RwLock::new([0u8; 32]));
-    unsafe { GLOBAL_SEED = Some(seed_arc.clone()) }
+    // Clone the Arc to move it into the thread. This is the standard, safe way.
+    let seed_arc = GLOBAL_SEED.clone();
 
     thread::spawn(move || {
         let host = cpal::default_host();
-        let device = match host.default_input_device() {
-            Some(d) => d,
-            None => {
-                eprintln!("找不到音频输入设备喵");
-                return;
+        let device = host
+            .default_input_device()
+            .expect("Failed to get default input device");
+        let mut supported_configs_range = device
+            .supported_input_configs()
+            .expect("error while querying configs");
+        let supported_config = supported_configs_range
+            .next()
+            .expect("no supported config?!")
+            .with_max_sample_rate();
+
+        let (tx, rx) = mpsc::channel::<Vec<f32>>();
+
+        let stream = match supported_config.sample_format() {
+            cpal::SampleFormat::F32 => {
+                build_input_stream::<f32>(&device, &supported_config.into(), tx)
             }
-        };
-
-        let supported_config = match device.default_input_config() {
-            Ok(c) => c,
-            Err(e) => {
-                eprintln!("音频配置失败: {:?}", e);
-                return;
+            cpal::SampleFormat::I16 => {
+                build_input_stream::<i16>(&device, &supported_config.into(), tx)
             }
-        };
-        let sample_format = supported_config.sample_format();
-        let config: StreamConfig = supported_config.into();
-
-        let (sample_tx, sample_rx) = std::sync::mpsc::channel();
-
-        let stream = match sample_format {
-            SampleFormat::F32 => build_input_stream::<f32>(&device, &config, sample_tx),
-            SampleFormat::I16 => build_input_stream::<i16>(&device, &config, sample_tx),
-            SampleFormat::U16 => build_input_stream::<u16>(&device, &config, sample_tx),
+            cpal::SampleFormat::U16 => {
+                build_input_stream::<u16>(&device, &supported_config.into(), tx)
+            }
             _ => {
-                eprintln!("不支持的音频格式喵");
-                return;
+                // Fallback for any future/unknown sample formats; choose f32 as a safe default.
+                build_input_stream::<f32>(&device, &supported_config.into(), tx)
             }
         };
+        stream.play().unwrap();
 
-        let stream = match stream {
-            Ok(s) => s,
-            Err(e) => {
-                eprintln!("创建音频流失败: {}", e);
-                return;
-            }
-        };
-
-        if let Err(e) = stream.play() {
-            eprintln!("播放音频流失败: {}", e);
-            return;
-        }
-
-        for chunk in sample_rx {
+        for data in rx {
             let mut hasher = Sha256::new();
-            for s in chunk {
-                hasher.update(s.to_le_bytes());
+            for sample in data {
+                hasher.update(&sample.to_le_bytes());
             }
+
             hasher.update(rand::random::<[u8; 32]>());
-            if let Ok(time_bytes) =
-                std::time::SystemTime::now().elapsed().map(|d| d.as_nanos().to_le_bytes())
-            {
-                hasher.update(time_bytes);
+            if let Ok(duration) = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH) {
+                hasher.update(&duration.as_nanos().to_le_bytes());
             }
 
-            let result = hasher.finalize();
-            let mut new_seed = [0u8; 32];
-            new_seed.copy_from_slice(&result[..]);
-
-            if let Ok(mut seed) = seed_arc.write() {
-                *seed = new_seed;
-            }
+            // Safely acquire a write lock and update the seed.
+            let mut seed_guard = seed_arc.write().unwrap();
+            *seed_guard = Some(hasher.finalize().into());
         }
     });
 }
 
+
 fn build_input_stream<T>(
     device: &cpal::Device,
-    config: &StreamConfig,
-    tx: std::sync::mpsc::Sender<Vec<f32>>,
-) -> Result<cpal::Stream, String>
+    config: &cpal::StreamConfig,
+    tx: mpsc::Sender<Vec<f32>>,
+) -> cpal::Stream
 where
-    T: Sample + SizedSample + 'static,
+    T: Sample + SizedSample + Send + 'static,
 {
-    device
-        .build_input_stream(
+    let err_fn = |err| eprintln!("❌ stream error: {}", err);
+
+    let stream = device
+        .build_input_stream::<T, _, _>(
             config,
             move |data: &[T], _: &cpal::InputCallbackInfo| {
-                let chunk: Vec<f32> = data.iter().map(|&s| sample_to_f32(s)).collect();
-                let _ = tx.send(chunk);
+                
+                let samples_f32: Vec<f32> = data.iter().map(|s| s.to_float_sample().to_sample::<f32>()).collect();
+
+                if let Err(e) = tx.send(samples_f32) {
+                    eprintln!("⚠️ failed to send samples: {}", e);
+                }
             },
-            move |err| eprintln!("音频输入错误: {:?}", err),
-            None,
+            err_fn,
+            None::<Duration>, 
         )
-        .map_err(|e| e.to_string())
+        .expect("💥 Failed to build input stream");
+
+    stream
 }
 
-fn sample_to_f32<T: Sample + 'static>(sample: T) -> f32 {
-    if TypeId::of::<T>() == TypeId::of::<f32>() {
-        unsafe { std::mem::transmute_copy(&sample) }
-    } else if TypeId::of::<T>() == TypeId::of::<i16>() {
-        let v: i16 = unsafe { std::mem::transmute_copy(&sample) };
-        v as f32 / i16::MAX as f32
-    } else if TypeId::of::<T>() == TypeId::of::<u16>() {
-        let v: u16 = unsafe { std::mem::transmute_copy(&sample) };
-        (v as f32 / u16::MAX as f32) * 2.0 - 1.0
-    } else {
-        0.0
-    }
-}
+
 
 #[tauri::command]
 fn generate_number(min: u32, max: u32) -> Result<u32, String> {
     if min > max {
-        return Err("最小值不能大于最大值喵".into());
+        return Err("Min cannot be greater than Max".to_string());
     }
 
-    let seed = unsafe {
-        // 1. 使用 addr_of_mut! 获取原始指针，这不会创建引用。
-        let ptr = std::ptr::addr_of_mut!(GLOBAL_SEED);
-        // 2. 解引用指针以访问内部的 Option，然后对其调用 .as_ref()。
-        // 这里的 .as_ref() 是在指针指向的值上调用的，而不是在 static mut 变量本身上。
-        (*ptr)
-            .as_ref()
-            .and_then(|arc| arc.read().ok())
-            .map(|s| *s)
-            .unwrap_or_else(|| rand::random())
-    };
+    // Safely get a read lock.
+    let seed_guard = GLOBAL_SEED.read().unwrap();
 
+    // Use the seed if it exists, otherwise fall back to a random seed.
+    let seed = seed_guard.unwrap_or_else(rand::random);
 
     let mut rng = ChaChaRng::from_seed(seed);
-
     loop {
-        let number = rng.gen_range(min..=max);
-        match number {
-            // 如果生成的数字是 35 或者 26，什么也不做 ({}).
-            // 这会导致 match 结束，loop 进入下一次迭代。
-            35 | 26 => {}
-            // 对于任何其他数字 (`_` 是一个通配符)，
-            // 将其作为 Ok 值返回。
-            _ => return Ok(number),
+        let num = rng.gen_range(min..=max);
+        if num != 35 && num != 26 {
+            return Ok(num);
         }
     }
 }
 
 #[tauri::command]
 fn seedprinter() -> String {
-    let seed = unsafe {
-        let ptr = std::ptr::addr_of_mut!(GLOBAL_SEED);
-        (*ptr)
-            .as_ref()
-            .and_then(|arc| arc.read().ok())
-            .map(|s| *s)
-            .unwrap_or_else(|| rand::random())
-    };
-    let mut hasher = Sha256::new();
-    hasher.update(seed);
-    let hash_result = hasher.finalize();
-    // 2. 将完整的 32 字节哈希格式化为 64 个字符的十六进制字符串
-    //    例如: "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
-    let full_hex_string = format!("{:x}", hash_result);
-    // 3. 截取字符串的前 10 个字符并返回
-    //    例如: "ba7816bf8f"
-    //    我们使用 .chars() 迭代字符，.take(10) 获取前十个，
-    //    然后 .collect() 将它们重新组合成一个新的 String。
-    full_hex_string.chars().take(10).collect()
+    // Safely get a read lock.
+    let seed_guard = GLOBAL_SEED.read().unwrap();
+    
+    if let Some(seed) = *seed_guard {
+        let mut hasher = Sha256::new();
+        hasher.update(seed);
+        let result = hasher.finalize();
+        let hex_string = format!("{:x}", result);
+        hex_string.chars().take(10).collect()
+    } else {
+        "Seeding...".to_string()
+    }
 }
 
 fn main() {
-    init_audio_seed();
+    init_audio_seed(); // Start seeding in the background
 
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![generate_number, seedprinter])
