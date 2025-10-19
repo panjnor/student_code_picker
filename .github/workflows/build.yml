@@ -65,27 +65,3 @@ jobs:
           releaseBody: "More new features are now supported."
           tauriScript: npm run tauri
           args: --target ${{ matrix.target }}
-
-
-  release-update:
-    runs-on: ubuntu-latest
-    needs: [release]
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: 'npm'
-
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Create updater artifacts
-        run: npm run updater
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
