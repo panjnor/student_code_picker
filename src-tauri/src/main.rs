@@ -116,7 +116,7 @@ fn generate_number(min: u32, max: u32) -> Result<u32, String> {
         let num = rng.gen_range(min..=max);
         if num == 35 || num == 26 {
             if use_special_probability {
-                if rng.gen_range(1..=2+range_size) == 1 {
+                if rng.gen_range(1..=2*range_size) == 1 {
                     return Ok(num);
                 }
             }
@@ -133,7 +133,7 @@ fn random_number_normal(min: u32, max: u32) -> Result<u32,String> {
     }
     let seed_guard = GLOBAL_SEED.read().unwrap();
     // Use the seed if it exists, otherwise fall back to a random seed.
-    let seed = seed_guard.unwrap_or_else(rand::random);
+    let seed = seed_guard.unwrap_or_else(|| rand::random());
     let mut rng = ChaChaRng::from_seed(seed);
     let num=rng.gen_range(min..=max);
     return Ok(num);

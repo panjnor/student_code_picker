@@ -91,7 +91,7 @@ function startDrawing() {
   numberPromise = new Promise(resolve => {
     setTimeout(() => {
       resolve(window.__TAURI__.core.invoke('generate_number', { min, max }));
-    }, 1000); // 至少滚动1秒
+    }, 100); // 滚动100ms
   });
 
   // --- 启动前端数字滚动动画 ---
