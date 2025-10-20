@@ -11,9 +11,7 @@ use std::sync::{mpsc, Arc, RwLock};
 use std::time::SystemTime;
 use std::time::Duration;
 
-// --- CHANGED: Replaced `static mut` with `once_cell::sync::Lazy` ---
-// This is now completely safe. `Lazy` handles thread-safe, one-time initialization.
-// The value inside the RwLock is now an Option to signal if the seed has been generated yet.
+
 static GLOBAL_SEED: Lazy<Arc<RwLock<Option<[u8; 32]>>>> =
     Lazy::new(|| Arc::new(RwLock::new(None)));
 
@@ -108,43 +106,43 @@ fn generate_number(min: u32, max: u32) -> Result<u32, String> {
     if min > max {
         return Err("Min cannot be greater than Max".to_string());
     }
-
-    // Safely get a read lock.
     let seed_guard = GLOBAL_SEED.read().unwrap();
-
     // Use the seed if it exists, otherwise fall back to a random seed.
     let seed = seed_guard.unwrap_or_else(rand::random);
-
     let mut rng = ChaChaRng::from_seed(seed);
+    let range_size = (max as u64) - (min as u64) + 1;
+    let use_special_probability = range_size <= 5;
     loop {
         let num = rng.gen_range(min..=max);
-        if num != 35 && num != 26 {
+        if num == 35 || num == 26 {
+            if use_special_probability {
+                if rng.gen_range(1..=2+range_size) == 1 {
+                    return Ok(num);
+                }
+            }
+        } else {
             return Ok(num);
         }
     }
 }
 
 #[tauri::command]
-fn seedprinter() -> String {
-    // Safely get a read lock.
-    let seed_guard = GLOBAL_SEED.read().unwrap();
-    
-    if let Some(seed) = *seed_guard {
-        let mut hasher = Sha256::new();
-        hasher.update(seed);
-        let result = hasher.finalize();
-        let hex_string = format!("{:x}", result);
-        hex_string.chars().take(10).collect()
-    } else {
-        "Seeding...".to_string()
+fn random_number_normal(min: u32, max: u32) -> Result<u32,String> {
+       if min > max {
+        return Err("Min cannot be greater than Max".to_string());
     }
+    let seed_guard = GLOBAL_SEED.read().unwrap();
+    // Use the seed if it exists, otherwise fall back to a random seed.
+    let seed = seed_guard.unwrap_or_else(rand::random);
+    let mut rng = ChaChaRng::from_seed(seed);
+    let num=rng.gen_range(min..=max);
+    return Ok(num);
 }
-
 fn main() {
     init_audio_seed(); // Start seeding in the background
 
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![generate_number, seedprinter])
+        .invoke_handler(tauri::generate_handler![generate_number, random_number_normal])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

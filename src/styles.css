@@ -1,165 +1,173 @@
-/* src/style.css */
-
-/* --- 全局与背景 --- */
+/* === 全局与背景 === */
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
   display: grid;
   place-content: center;
   min-height: 100vh;
-  margin: 0; /* 移除默认边距 */
+  margin: 0;
   text-align: center;
-  /* 使用柔和的绿色渐变背景 */
-  background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%);
-  color: #333; /* 设定一个基础的文本颜色 */
+  color: #1a1a1a;
+  background: linear-gradient(135deg, #d9f0dc 0%, #eaf7e9 100%);
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* --- 主容器 --- */
+/* === 主容器 === */
 .container {
-  background: white;
-  padding: 4rem 3.5rem; /* 增加内边距，让内容更舒展 */
-  border-radius: 12px; /* 更大的圆角，看起来更柔和 */
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12); /* 更柔和、更弥散的阴影 */
-  border: 1px solid #e0e0e0; /* 添加一个细微的边框 */
-  min-width: 320px; /* 确保在小屏幕上不会太窄 */
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  background: rgba(255, 255, 255, 0.65); /* Mica 半透明 */
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 3rem 2.5rem;
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(60, 90, 60, 0.15);
+  transition: all 0.3s ease-in-out;
+  min-width: 320px;
 }
 
-/* --- 标题 --- */
+/* 悬浮时微微浮起，带柔光 */
+.container:hover {
+  box-shadow: 0 12px 40px rgba(60, 90, 60, 0.2);
+  transform: translateY(-3px);
+}
+
+/* === 标题 === */
 h1 {
-  color: #1B5E20; /* 使用深绿色作为标题颜色 */
+  color: #205c35;
   margin-bottom: 2rem;
   font-weight: 600;
-  letter-spacing: 0.5px; /* 微调字间距 */
+  letter-spacing: 0.5px;
+  text-shadow: 0 1px 2px rgba(32, 92, 53, 0.1);
 }
 
-/* --- 输入框 --- */
+/* === 输入框 === */
 input {
-  width: 90px; /* 稍微加宽 */
+  width: 100px;
   padding: 10px;
-  margin: 0 10px;
-  border: 1px solid #ccc;
-  border-radius: 6px; /* 轻微增加圆角 */
+  margin: 0 8px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
   font-size: 1rem;
   text-align: center;
-  /* 添加过渡效果，让焦点变化更平滑 */
-  transition: all 0.2s ease-in-out;
+  background: rgba(255, 255, 255, 0.6);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+  transition: all 0.25s ease;
 }
 
-/* 输入框获取焦点时的效果 */
 input:focus {
-  outline: none; /* 移除默认的蓝色轮廓 */
-  border-color: #4CAF50; /* 边框变为主题绿色 */
-  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.2); /* 添加柔和的绿色光晕 */
+  outline: none;
+  border-color: #5cb85c;
+  box-shadow: 0 0 0 3px rgba(92, 184, 92, 0.2);
+  background: rgba(255, 255, 255, 0.85);
 }
 
-/* --- 按钮 --- */
+/* === 按钮 === */
 button {
-  padding: 10px 24px;
+  padding: 10px 26px;
   border: none;
-  border-radius: 6px;
-  /* 使用一个鲜明而友好的绿色 */
-  background-color: #4CAF50; 
-  color: white;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #4CAF50, #43A047);
+  color: #fff;
   cursor: pointer;
   font-size: 1rem;
   font-weight: 500;
-  /* 添加过渡效果，让悬停变化更平滑 */
-  transition: all 0.2s ease-in-out;
+  letter-spacing: 0.3px;
+  transition: all 0.25s ease;
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.25);
 }
 
-/* 按钮悬停时的效果 */
 button:hover {
-  background-color: #45a049; /* 悬停时颜色加深 */
-  transform: translateY(-2px); /* 轻微上浮效果 */
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  background: linear-gradient(135deg, #43A047, #388E3C);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(56, 142, 60, 0.3);
 }
 
-/* 按钮被点击时的效果 */
 button:active {
-  transform: translateY(0); /* 按下时恢复原位 */
+  transform: translateY(0);
   box-shadow: none;
 }
 
-/* --- 结果显示区域 --- */
+/* === 结果显示区 === */
 #result {
   margin-top: 2rem;
   padding: 1rem;
-  background-color: #f9f9f9;
-  border-radius: 6px;
-  font-size: 1.8rem;
-  font-weight: bold;
-  /* 使用深绿色，与主题保持一致 */
-  color: #1B5E20; 
-  min-height: 50px; /* 确保在没有结果时也有一定高度 */
+  background: rgba(240, 248, 240, 0.6);
+  border-radius: 10px;
+  font-size: 2.8rem;
+  font-weight: 600;
+  color: #1B5E20;
+  min-height: 50px;
   line-height: 50px;
+  backdrop-filter: blur(10px);
 }
 
-/* --- Confetti Canvas --- */
+/* === Confetti Canvas === */
 #confetti-canvas {
-  /* 固定在屏幕上，覆盖所有内容 */
   position: fixed;
-  top: 0;
-  left: 0;
+  inset: 0;
   width: 100vw;
   height: 100vh;
-  /* 确保它在最顶层 */
   z-index: 1000;
-  /* 默认隐藏，不响应鼠标事件 */
   display: none;
   pointer-events: none;
 }
 
-/* 当需要显示纸屑时，我们会给 canvas 添加 .active 类 */
 #confetti-canvas.active {
   display: block;
 }
 
-/* 弹窗遮罩层，使其在页面正中央 */
+/* === 弹窗遮罩层 === */
 #popup-overlay {
-  /* 默认隐藏 */
-  display: none; 
-  
-  /* 固定定位，覆盖整个屏幕 */
+  display: none;
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  
-  /* Flexbox 布局，用于轻松实现内容居中 */
+  inset: 0;
   justify-content: center;
   align-items: center;
-  
-  /* 半透明黑色背景，可以不加，但加上效果更好 */
-  background-color: rgba(46, 69, 47, 0.671); 
-  backdrop-filter: blur(10px); /* 添加模糊效果 */
-  
-  /* 确保在最顶层 */
-  z-index: 1000; 
+  background: rgba(46, 69, 47, 0.45);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  z-index: 1000;
+  animation: fadeIn 0.3s ease forwards;
 }
 
-/* 弹窗内容框本身 */
+/* 弹窗内容 */
 #popup-content {
-  /* 尺寸：页面的 1/3 */
-  width: 65vw; /* 65% 的视窗宽度 */
-  height: 65vh; /* 75% 的视窗高度 */
-
-  /* 颜色和边框 */
-  background-color: #8ab3847b; /* 一个不错的绿豆色 */
-  border-radius: 20px; /* 圆角 */
-  
-  /* 内部文字样式 */
-  color: rgba(34, 97, 40, 0.736); /* 白色文字，对比度高 */
-  font-family: sans-serif;
-  font-size: 17vw; /* 字体大小也根据视窗宽度调整 */
-  font-weight: bold;
-  text-shadow: 2px 2px 4px rgba(64, 94, 64, 0.5); /* 文字阴影，增加可读性 */
-  
-  /* 再次使用 Flexbox，确保数字在框内也完美居中 */
+  width: 60vw;
+  height: 60vh;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 24px;
+  color: rgba(30, 80, 40, 0.9);
+  font-family: "Segoe UI", sans-serif;
+  font-size: 14vw;
+  font-weight: 700;
+  text-shadow: 2px 2px 4px rgba(60, 80, 60, 0.3);
   display: flex;
   justify-content: center;
   align-items: center;
-
-  /* 添加一点阴影让框有立体感 */
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(25px) saturate(180%);
 }
 
+/* === 静音提示 === */
+#mute-canvas {
+  position: fixed;
+  top: 15px;
+  right: 15px;
+  background: rgba(126, 166, 158, 0.63);
+  border-radius: 8px;
+  padding: 6px 12px;
+  z-index: 2000;
+  pointer-events: none;
+  backdrop-filter: blur(5px);
+  box-shadow: 0 4px 8px rgba(45, 110, 95, 0.2);
+}
+
+#mute-canvas.hidden {
+  display: none;
+}
+
+/* === 动画 === */
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.97); }
+  to { opacity: 1; transform: scale(1); }
+}
